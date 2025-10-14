@@ -4,25 +4,25 @@ from random import shuffle
 
 
 class SigmarMarble(Enum):
-    salt: 0
-    earth: 1
-    fire: 2
-    wind: 3
-    water: 4
-    lead: 16
-    tin: 17
-    iron: 18
-    copper: 19
-    silver: 20
-    gold: 21
-    quicksilver: 32
-    mors: 64
-    vitae: 65
+    salt = 0
+    earth = 1
+    fire = 2
+    wind = 3
+    water = 4
+    lead = 16
+    tin = 17
+    iron = 18
+    copper = 19
+    silver = 20
+    gold = 21
+    quicksilver = 32
+    mors = 64
+    vitae = 65
 
 
 class SigmarField:
     def __init__(self, marble: int | None, neighbours: Optional[list["SigmarField"]] = None, board_edge_field = False):
-        self.marble = marble
+        self.marble: int | None = marble
         self.left_up_neigh: Optional["SigmarField"] = None
         self.right_up_neigh: Optional["SigmarField"] = None
         self.right_neigh: Optional["SigmarField"] = None
@@ -94,6 +94,7 @@ class SmallSigmarBoard:
         32: "q",  # quicksilver
         64: "m",  # mors
         65: "v",  # vitae
+        None: "_"  # empty field
     }
 
     def __init__(self):
@@ -167,5 +168,32 @@ class SmallSigmarBoard:
         this_board_layout_pairs = shuffle(self.initial_items)
         # for pair in this_board_layout_pairs:
 
+    def print_board(self):
+        mid_row_idx = len(self.layout)//2-1
+        space_count = mid_row_idx*2 + 2
+        print(" " * (space_count-2), "/-"+"---"*(len(self.layout[1])-2)+"-\\")
+        for idx, row in enumerate(self.layout[1:-1]):
+            if idx < mid_row_idx:
+                row_txt = " " * (space_count-2) + "/ "
+                space_count -= 2
+            elif idx == mid_row_idx:
+                row_txt = " " * (space_count-1) + "<"
+                space_count += 2
+            else:
+                row_txt = " " * (space_count-2) + "\\ "
+                space_count += 2
+            field: SigmarField
+            row_txt += " - ".join([f"{self.sigmar_text_encoding[field.marble]}" for field in row[1:-1]])
+            if idx < mid_row_idx:
+                row_txt += " \\"
+            elif idx == mid_row_idx:
+                row_txt += ">"
+            else:
+                row_txt += " /"
+            print(row_txt)
+        print(" " * (space_count-4), "\\-"+"---"*(len(self.layout[1])-2)+"-/")
 
 
+if __name__ == '__main__':
+    smol_board = SmallSigmarBoard()
+    smol_board.print_board()
