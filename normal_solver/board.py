@@ -21,8 +21,11 @@ class SigmarMarble(Enum):
 
 
 class SigmarField:
-    def __init__(self, marble: int | None, neighbours: Optional[list["SigmarField"]] = None, board_edge_field = False):
+    def __init__(self, marble: int | None, row_index: int, field_index: int,
+                 neighbours: Optional[list["SigmarField"]] = None, board_edge_field = False):
         self.marble: int | None = marble
+        self.row_index = row_index
+        self.field_index = field_index
         self.left_up_neigh: Optional["SigmarField"] = None
         self.right_up_neigh: Optional["SigmarField"] = None
         self.right_neigh: Optional["SigmarField"] = None
@@ -126,7 +129,8 @@ class SmallSigmarBoard:
         #       n - n - n - n - n - n
         sizes = [6, 7, 8, 9, 8, 7, 6]
         self.layout: list[list[SigmarField]] = [
-            [SigmarField(None) for _ in range(size)] for size in sizes
+            [SigmarField(None, row_idx, field_idx) for field_idx in range(size)]
+            for row_idx, size in enumerate(sizes)
         ]
         for field in self.layout[0]:
             field.board_edge_field = True
@@ -137,8 +141,8 @@ class SmallSigmarBoard:
             layer[-1].board_edge_field = True
 
     def compose_board_interconnections(self):
+        field: SigmarField
         for row_idx, board_row in enumerate(self.layout[1:4]):
-            field: SigmarField
             for field_idx, field in enumerate(board_row[1:-1]):
                 field.left_up_neigh = self.layout[row_idx][field_idx]
                 field.right_up_neigh = self.layout[row_idx][field_idx+1]
@@ -151,7 +155,6 @@ class SmallSigmarBoard:
                     field.left_down_neigh = self.layout[row_idx+2][field_idx]
                     field.right_down_neigh = self.layout[row_idx+2][field_idx+1]
         for row_idx, board_row in enumerate(self.layout[4:-1]):
-            field: SigmarField
             for field_idx, field in enumerate(board_row[1:-1]):
                 field.left_up_neigh = self.layout[3+row_idx][field_idx+1]
                 field.right_up_neigh = self.layout[3+row_idx][field_idx+2]
