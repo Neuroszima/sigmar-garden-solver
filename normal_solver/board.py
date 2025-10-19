@@ -1,6 +1,6 @@
 from typing import Optional
 from enum import Enum
-from random import shuffle
+from random import shuffle, choice, randint
 
 
 class SigmarMarble(Enum):
@@ -40,6 +40,14 @@ class SigmarField:
         self.free = False
         self.board_edge_field = board_edge_field
 
+    def __eq__(self, other):
+        """This only used for tests."""
+        if isinstance(other, self.__class__):
+            return (self.marble == other.marble) and (self.row_index == other.row_index) \
+                and (self.field_index == other.field_index) and (self.board_edge_field == other.board_edge_field)
+        else:
+            return NotImplemented
+
     def update_neighbours(self, neighbours: Optional[list["SigmarField"]]):
         self.left_up_neigh = neighbours[0]
         self.right_up_neigh = neighbours[1]
@@ -61,11 +69,17 @@ class SigmarField:
             self.right_up_neigh,
         ]
 
-    def check_and_set_free_status(self):
+    def check_and_set_free_status(self, invoke_for_neighbours=True):
+        if self.board_edge_field:
+            self.free = True
+            return True
         i = 0
         j = 1
         k = 2
         n_list = self.get_continuous_neigh_list()
+        if invoke_for_neighbours:
+            for neigh in n_list[:6]:
+                neigh.check_and_set_free_status(invoke_for_neighbours=False)
         for _ in range(6):
             if n_list[i].marble is None and n_list[j].marble is None and n_list[k].marble is None:
                 self.free = True
@@ -77,8 +91,15 @@ class SigmarField:
 
     def update_field(self, marble: int | None):
         self.marble = marble
+        self.check_and_set_free_status()
+
+    @property
+    def enclosed_status(self):
+        counter = 0
         for neigh in self.get_continuous_neigh_list()[:6]:
-            neigh.check_and_set_free_status()
+            if neigh.marble is not None:
+                counter += 1
+        return counter == 6
 
 
 class SmallSigmarBoard:
@@ -108,12 +129,15 @@ class SmallSigmarBoard:
             (SigmarMarble.wind, SigmarMarble.wind), (SigmarMarble.water, SigmarMarble.water),
             (SigmarMarble.mors, SigmarMarble.vitae), (SigmarMarble.salt, SigmarMarble.salt)
         ]
+        print(self.initial_items)
         total_items = len(self.initial_items)*2+1
         print("total count of initial items in the simple version of the game:", total_items)
         self.layout = None
         self.init_board_rows()
+        print("init connections:")
         self.compose_board_interconnections()
-        self.layout_midpoint = 2, 3
+        print("layout done")
+        self.layout_midpoint = 3, 4
 
     def init_board_rows(self):
         # small board only has limited amount of fields compared to the regular layout which has plenty
@@ -162,14 +186,35 @@ class SmallSigmarBoard:
                 field.right_neigh = board_row[field_idx+2]
                 field.left_down_neigh = self.layout[3+row_idx+2][field_idx]
                 field.right_down_neigh = self.layout[3+row_idx+2][field_idx+1]
+        for board_row in self.layout[1:-1]:
+            for field in board_row[1:-1]:
+                field.check_and_set_free_status()
 
-    def lay_down_elements_in_wavefront(self):
+    def __rand_select_marble_by_index(self, marble_list_: list):
+        if len(marble_list_) < 1:
+            raise RuntimeError("Passed list is empty when it should not be.")
+        elif len(marble_list_) == 1:
+            return 0
+        else:
+            return randint(0, len(marble_list_)-1)
+
+    def lay_down_marbles_in_wavefront(self):
+        """Untested"""
         mid_row = len(self.layout)//2+1
         mid_element = len(self.layout[mid_row])//2+1
         self.layout[mid_row][mid_element].update_field(self.first_element.value())
         eligible_wavefront_elements = [self.layout[mid_row][mid_element]]
-        this_board_layout_pairs = shuffle(self.initial_items)
-        # for pair in this_board_layout_pairs:
+        shuffle(self.initial_items)
+        for pair in self.initial_items:
+            marble: Enum
+            for marble in pair:
+                wavefront_sigfield_index = self.__rand_select_marble_by_index(eligible_wavefront_elements)
+                wavefront_sigmar_field: SigmarField = eligible_wavefront_elements[wavefront_sigfield_index]
+                for neigh in wavefront_sigmar_field.get_continuous_neigh_list()[:6]:
+                    set_field = False
+                    if neigh.marble is None and neigh.free and not neigh.board_edge_field:
+                        neigh.update_field(marble.value())
+
 
     def print_board(self):
         mid_row_idx = len(self.layout)//2-1
