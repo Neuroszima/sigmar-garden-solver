@@ -1,6 +1,6 @@
 from typing import Optional
 from enum import Enum
-from random import shuffle, choice, randint
+from random import shuffle, randint
 
 
 class SigmarMarble(Enum):
@@ -129,15 +129,19 @@ class SmallSigmarBoard:
             (SigmarMarble.wind, SigmarMarble.wind), (SigmarMarble.water, SigmarMarble.water),
             (SigmarMarble.mors, SigmarMarble.vitae), (SigmarMarble.salt, SigmarMarble.salt)
         ]
-        print(self.initial_items)
-        total_items = len(self.initial_items)*2+1
-        print("total count of initial items in the simple version of the game:", total_items)
-        self.layout = None
+        self.layout: list[list[SigmarField]] | None = None
         self.init_board_rows()
-        print("init connections:")
         self.compose_board_interconnections()
-        print("layout done")
         self.layout_midpoint = 3, 4
+
+    @staticmethod
+    def __rand_select_marble_by_index(marble_list_: list):
+        if len(marble_list_) < 1:
+            raise RuntimeError("Passed list is empty when it should not be.")
+        elif len(marble_list_) == 1:
+            return 0
+        else:
+            return randint(0, len(marble_list_)-1)
 
     def init_board_rows(self):
         # small board only has limited amount of fields compared to the regular layout which has plenty
@@ -190,31 +194,46 @@ class SmallSigmarBoard:
             for field in board_row[1:-1]:
                 field.check_and_set_free_status()
 
-    def __rand_select_marble_by_index(self, marble_list_: list):
-        if len(marble_list_) < 1:
-            raise RuntimeError("Passed list is empty when it should not be.")
-        elif len(marble_list_) == 1:
-            return 0
-        else:
-            return randint(0, len(marble_list_)-1)
+    def reset_board(self):
+        """Return board to empty state for a new game/test."""
+
 
     def lay_down_marbles_in_wavefront(self):
-        """Untested"""
-        mid_row = len(self.layout)//2+1
-        mid_element = len(self.layout[mid_row])//2+1
-        self.layout[mid_row][mid_element].update_field(self.first_element.value())
-        eligible_wavefront_elements = [self.layout[mid_row][mid_element]]
+        """
+        Since original Sigmar Garden game starts from the middle and the first middle element is always the "Gold"
+        marble, place it in the middle of the layout. Also, start placing other pairs of marbles, moving out from
+        center to the edges, randomly picking the neighbour of the wavefront to propagate outwards.
+
+        Partially tested
+        """
+        # mid_row = len(self.layout)//2+1
+        # mid_element = len(self.layout[mid_row])//2+1
+        self.layout[self.layout_midpoint[0]][self.layout_midpoint[1]].update_field(self.first_element.value)
+        eligible_wavefront_elements = [self.layout[self.layout_midpoint[0]][self.layout_midpoint[1]]]
         shuffle(self.initial_items)
         for pair in self.initial_items:
             marble: Enum
             for marble in pair:
-                wavefront_sigfield_index = self.__rand_select_marble_by_index(eligible_wavefront_elements)
-                wavefront_sigmar_field: SigmarField = eligible_wavefront_elements[wavefront_sigfield_index]
-                for neigh in wavefront_sigmar_field.get_continuous_neigh_list()[:6]:
-                    set_field = False
-                    if neigh.marble is None and neigh.free and not neigh.board_edge_field:
-                        neigh.update_field(marble.value())
-
+                success = False
+                randomized_wavefront_indexes = [*range(len(eligible_wavefront_elements))]
+                # search through available space to place the marble. Do it for each eligible field in the
+                for wavefront_sigfield_index in randomized_wavefront_indexes:
+                    wavefront_sigmar_field: SigmarField = eligible_wavefront_elements[wavefront_sigfield_index]
+                    randomized_neighbours = wavefront_sigmar_field.get_continuous_neigh_list()[:6]
+                    shuffle(randomized_neighbours)
+                    for neigh in randomized_neighbours:
+                        if neigh.marble is None and neigh.free and not neigh.board_edge_field:
+                            neigh.update_field(marble.value)  # "value" is a property not a regular method
+                            success = True
+                        if success:
+                            if wavefront_sigmar_field.enclosed_status:
+                                eligible_wavefront_elements.pop(wavefront_sigfield_index)
+                            eligible_wavefront_elements.append(neigh)
+                            break
+                    if success:  # on success, break from both loops and pick another marble to place
+                        break
+                if not success:
+                    raise RuntimeError(f"Could not find proper field for {marble=}, aborting.")
 
     def print_board(self):
         mid_row_idx = len(self.layout)//2-1
@@ -244,4 +263,6 @@ class SmallSigmarBoard:
 
 if __name__ == '__main__':
     smol_board = SmallSigmarBoard()
+    smol_board.print_board()
+    smol_board.lay_down_marbles_in_wavefront()
     smol_board.print_board()

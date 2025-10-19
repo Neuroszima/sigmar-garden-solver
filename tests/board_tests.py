@@ -71,6 +71,42 @@ class SigmarFieldTests(TestCase):
             self.assertIs(other_fields_list[i], neighbouring_field_pointer)
 
     def test_check_and_set_free_status(self):
+        """
+        Test checking if marble placed on the given field will be marked correctly as "free to interact with"
+        by the method or not.
+
+        Example:
+
+        Looking at the specific field present on the board, the layout could resemble something like this:
+
+                u   u
+                 \ /
+              o - m - u
+                 / \
+                o   o
+
+        Where, when looked at the field in the middle (denoted as "m" above), looking at hexagonal layout around,
+        the field could be surrounded by other marbles. Considering layout above as "resembling hexagonal", and
+        noting "u" cells that are "unoccupied" (not containing a marble), and "o" as "occupied" by a marble, we
+        say that layout presents a case where marble is "free to interact with".
+
+        It is said so because we can see that 3 of the surrounding fields form a consecutive block of unoccupied fields.
+        A consecutive block would be an arrangement of fields that surrounds a given one, when for each consecutive
+        field in it holds a relation of "unoccupied" or "occupied". The minimum number of spaces around the given field,
+        for that field to be considered "free" is 3 and each field of a block must be unoccupied.
+
+        Examples of layout arrangements, that middle field in it is NOT considered as free:
+
+                 o   u          u   o          u   u          o   u
+                  \ /            \ /            \ /            \ /
+               u - m - u      o - m - u      o - m - o      u - m - u
+                  / \            / \            / \            / \
+                 u   o          o   o          o   o          o   o
+
+        The property o "free" for a given field means that, when there is marble on it, a user can interact with this
+        field and match other marbles with the one placed in a "free" field. In other words - it is "free to interact
+        with" by the user.
+        """
         # all fields are filled with random marbles
         other_fields_list = [SigmarField(
             self.__get_rand_marble(), randint(1, 1000), randint(1, 1000)
@@ -80,7 +116,8 @@ class SigmarFieldTests(TestCase):
         self.test_field.check_and_set_free_status(invoke_for_neighbours=False)  # invoke only for this cell/field
         self.assertFalse(self.test_field.free, "Field is free even if all neighbours are full.")
 
-        # 3 neighbouring fields are emptied, setting an arc of 3 free fields, making test field selectable.
+        # 3 neighbouring fields are emptied, setting an "arc/block of 3 unoccupied fields",
+        # making test field selectable.
         start_idx = randint(0, 2)
         for i in range(3):
             other_fields_list[start_idx+i].marble = None
@@ -156,6 +193,15 @@ class BoardTest(TestCase):
     def setUp(self):
         self.mini_board = SmallSigmarBoard()
 
+    @staticmethod
+    def __rand_select_by_index(list_: list):
+        if len(list_) < 1:
+            raise RuntimeError("Passed list is empty when it should not be.")
+        elif len(list_) == 1:
+            return 0
+        else:
+            return randint(0, len(list_) - 1)
+
     def assertReciprocity(
         self, field_to_check: Literal[0, 1, 2, 3, 4, 5],
         original_field_reference: SigmarField, reciprocal_field_reference: SigmarField,
@@ -167,8 +213,8 @@ class BoardTest(TestCase):
 
         Reciprocity test checks if, by taking any field instance of the board from any particular row,
         by taking for example the "left-upper" connection of hexagonal layout, the instance of the pointed
-        gamefield also has an instance of the "pointee" -> in our example if "right-down" instance field of
-        has original gamefield as a pointer. Thus, we check if neighbouring gamefields see each other in each
+        game field also has an instance of the "pointee" -> in our example if "right-down" instance field of
+        has original game field as a pointer. Thus, we check if neighbouring game fields see each other in each
         respective instance, having pointers set to each other correctly.
         """
         err_msg = f"reciprocity assertion failed at {err_field}, {field_to_check=}"
@@ -208,6 +254,12 @@ class BoardTest(TestCase):
                 self.assertIsNone(field.marble)
 
     def test_board_adjacent_field_check(self):
+        """
+        Test if, during initialization of board layout, each meaningful element (that is - the ones that do not
+        act as an edge) see each other properly (have each other as neighbours in their respective object instances).
+
+        This is crucial for "free" checks for the main game to function.
+        """
         field: SigmarField
         for row_idx, row in enumerate(self.mini_board.layout):
             for field_idx, field in enumerate(row):
@@ -221,6 +273,51 @@ class BoardTest(TestCase):
                 self.assertReciprocity(4, field, field.left_down_neigh, err_field)
                 self.assertReciprocity(5, field, field.left_neigh, err_field)
                 self.assertTrue(field.free, f"Field that is not free: {err_field}")
+
+    def test_board_wavefront_layout(self):
+        """
+        Test if the wavefront layout method works as intended.
+        Test if marbles are not associated to fields on the edge and if all marbles are laid out.
+        """
+        field: SigmarField
+        self.mini_board.lay_down_marbles_in_wavefront()
+        elements_to_lay_down = [
+            self.mini_board.first_element.value,
+            *[pair[0].value for pair in self.mini_board.initial_items],
+            *[pair[1].value for pair in self.mini_board.initial_items],
+        ]
+
+        elements_laid_down = []
+        # we now check full layout, not only the main board fields. This means edges are checked for errors
+        for row in self.mini_board.layout:
+            for field in row:
+                if field.marble is None:
+                    continue
+                else:
+                    self.assertFalse(
+                        field.board_edge_field,
+                        "Marble placed on Sigmar Field that serves as board edge"
+                    )
+                    elements_laid_down.append(field.marble)
+        elements_to_clear = len(elements_to_lay_down)
+        while elements_to_clear > 0:
+            elem_idx = self.__rand_select_by_index(elements_to_lay_down)
+            marble_selected = elements_to_lay_down[elem_idx]
+            for i in range(len(elements_laid_down)):
+                if marble_selected == elements_laid_down[i]:
+                    elements_laid_down.pop(i)
+                    elements_to_lay_down.pop(elem_idx)
+                    break
+            elements_to_clear -= 1
+
+        self.assertEqual(
+            [], elements_laid_down,
+            f"Not all elements have been laid down: {elements_laid_down}"
+        )
+        self.assertEqual(
+            [], elements_to_lay_down,
+            f"Not all elements have been laid down: {elements_laid_down}"
+        )
 
 
 if __name__ == '__main__':
