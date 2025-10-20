@@ -49,6 +49,7 @@ class SigmarField:
             return NotImplemented
 
     def update_neighbours(self, neighbours: Optional[list["SigmarField"]]):
+        """Assign empty pointers to a real ones for each of the surrounding board fields"""
         self.left_up_neigh = neighbours[0]
         self.right_up_neigh = neighbours[1]
         self.right_neigh = neighbours[2]
@@ -57,6 +58,10 @@ class SigmarField:
         self.left_neigh = neighbours[5]
 
     def get_continuous_neigh_list(self):
+        """
+        Return a list of fields surrounding this one. Returns a list in counter-clockwise order.
+        Returns a list starting from left upper adjacent field.
+        """
         return [
             # list wraps up to reflect easier looping of three consecutive values
             self.left_up_neigh,
@@ -70,6 +75,10 @@ class SigmarField:
         ]
 
     def check_and_set_free_status(self, invoke_for_neighbours=True):
+        """
+        Check if the free status is valid for this board field/cell.
+        A cell that is "free" means user is able to interact with it and match other marbles placed on it.
+        """
         if self.board_edge_field:
             self.free = True
             return True
@@ -90,11 +99,16 @@ class SigmarField:
         return False
 
     def update_field(self, marble: int | None):
+        """
+        Invoke this to recalculate free status when needed, and also
+        after an action of taking the marble off this field.
+        """
         self.marble = marble
         self.check_and_set_free_status()
 
     @property
     def enclosed_status(self):
+        """Check if all the neighbouring fields are occupied by marbles."""
         counter = 0
         for neigh in self.get_continuous_neigh_list()[:6]:
             if neigh.marble is not None:
@@ -103,6 +117,10 @@ class SigmarField:
 
 
 class SmallSigmarBoard:
+    """
+    Small Sigmar Garden board used for application tests.
+    Real board is 11-wide map in the diameter, and has more sparse element placement compared to this one
+    """
     sigmar_text_encoding = {
         0: "0",  # salt
         1: "e",  # earth
