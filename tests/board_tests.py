@@ -189,7 +189,7 @@ class SigmarFieldTests(TestCase):
         self.assertFalse(nonfree_field.enclosed_status)
 
 
-class BoardTest(TestCase):
+class BoardTests(TestCase):
     def setUp(self):
         self.mini_board = SmallSigmarBoard()
 
@@ -254,12 +254,37 @@ class BoardTest(TestCase):
                 self.assertIsNone(field.marble)
 
     def test_board_reset(self):
+        """
+        Lay down marbles as if game was about to run, check correctness of the layout (more or less), then
+        check if after reset every field is empty and free. For fields in the middle of the board, check
+        if their "unblocked" status reports correctly (after reset).
+        """
+        # lay down elements and check if they were actually laid out
         self.mini_board.lay_down_marbles_in_wavefront()
+        self.assertEqual(
+            self.mini_board.first_element.value,
+            self.mini_board.layout[self.mini_board.layout_midpoint[0]][self.mini_board.layout_midpoint[1]].marble,
+            "Gold is not located in the middle!"
+        )
+        total_elements_to_lay_down = 1 + 2*len(self.mini_board.initial_items)
+        counter = 0
+        for row in self.mini_board.layout:
+            for field in row:
+                if field.board_edge_field:
+                    self.assertIsNone(field.marble)
+                else:
+                    if field.marble is not None:
+                        counter += 1
+        self.assertEqual(total_elements_to_lay_down, counter)
+
+        # test after board reset
+        self.mini_board.reset_board()
         for row in self.mini_board.layout:
             for field in row:
                 self.assertIsNone(field.marble)
                 self.assertTrue(field.free)
-                self.assertFalse(field.enclosed_status)
+                if not field.board_edge_field:
+                    self.assertFalse(field.enclosed_status)
 
     def test_board_adjacent_field_check(self):
         """

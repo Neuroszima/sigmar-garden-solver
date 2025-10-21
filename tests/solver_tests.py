@@ -25,6 +25,11 @@ class SmallSigmarGameTest(TestCase):
         self.assertEqual(SigmarMarble.lead.value, self.small_game.next_metal_to_clear)
 
     def test_marble_matching(self):
+        """
+        For each pair of good or bad marble combinations that would or would not match (respectively), check
+        if the function to match marbles works correctly, according to game rules.
+        Do that for regular numeric values as well.
+        """
         good_pairs = [
             (SigmarMarble.water, SigmarMarble.water), (SigmarMarble.fire, SigmarMarble.fire),
             (SigmarMarble.earth, SigmarMarble.earth), (SigmarMarble.wind, SigmarMarble.wind),
@@ -32,11 +37,13 @@ class SmallSigmarGameTest(TestCase):
             (SigmarMarble.salt, SigmarMarble.wind), (SigmarMarble.salt, SigmarMarble.fire),
             (SigmarMarble.salt, SigmarMarble.earth), (SigmarMarble.vitae, SigmarMarble.mors)
         ]
+        good_pairs = good_pairs + [(pair[0].value, pair[1].value) for pair in good_pairs]
         bad_pairs = [
             (SigmarMarble.water, SigmarMarble.earth), (SigmarMarble.quicksilver, SigmarMarble.earth),
             (SigmarMarble.vitae, SigmarMarble.fire), (SigmarMarble.salt, SigmarMarble.vitae),
             (SigmarMarble.silver, SigmarMarble.earth), (SigmarMarble.silver, SigmarMarble.water)
         ]
+        bad_pairs = bad_pairs + [(pair[0].value, pair[1].value) for pair in bad_pairs]
 
         for pair in good_pairs:
             msg = f"Not true for pair {pair[0]} {pair[1]}"

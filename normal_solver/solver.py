@@ -10,6 +10,7 @@ class SmallSigmarGame:
         (0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 1), (2, 2), (3, 3), (4, 4),
         (16, 32), (17, 32), (18, 32), (19, 32), (20, 32), (64, 65)
     }
+    base_marbles = {0, 1, 2, 3, 4}
     QUICKSILVER = SigmarMarble.quicksilver.value
 
     def __init__(self, board_type: Literal["small", "normal"]):
@@ -61,11 +62,18 @@ class SmallSigmarGame:
         marble_type_1 = self.__convert_to_int(marble_1)
         marble_type_2 = self.__convert_to_int(marble_2)
 
-        # allowed combination
-        if tuple([marble_type_1, marble_type_2]) in self.allowed_combinations \
-            or tuple([marble_type_2, marble_type_1]) in self.allowed_combinations:
-            # metal-quicksilver combination
-            if marble_type_1 == self.QUICKSILVER:
+        # allowed combinations
+        if (tuple([marble_type_1, marble_type_2]) in self.allowed_combinations) \
+            or (tuple([marble_type_2, marble_type_1]) in self.allowed_combinations):
+            if marble_type_1 in self.base_marbles:  # base element or salt
+                if marble_type_1 != 0:
+                    return (marble_type_2 == marble_type_1) or (marble_type_2 == 0)
+                return marble_type_2 in self.base_marbles
+            elif marble_type_2 in self.base_marbles:
+                if marble_type_2 != 0:
+                    return (marble_type_1 == marble_type_2) or (marble_type_1 == 0)
+                return marble_type_1 in self.base_marbles
+            if marble_type_1 == self.QUICKSILVER:  # metal/quicksilver
                 if marble_type_2 == self.next_metal_to_clear:
                     return True
                 return False
@@ -73,4 +81,8 @@ class SmallSigmarGame:
                 if marble_type_1 == self.next_metal_to_clear:
                     return True
                 return False
+            if marble_type_1 == 64:
+                return marble_type_2 == 65
+            elif marble_type_2 == 64:  # vitae/mors
+                return marble_type_1 == 65
         return False
