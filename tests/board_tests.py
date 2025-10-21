@@ -253,6 +253,14 @@ class BoardTest(TestCase):
                 self.assertIsInstance(field, SigmarField)
                 self.assertIsNone(field.marble)
 
+    def test_board_reset(self):
+        self.mini_board.lay_down_marbles_in_wavefront()
+        for row in self.mini_board.layout:
+            for field in row:
+                self.assertIsNone(field.marble)
+                self.assertTrue(field.free)
+                self.assertFalse(field.enclosed_status)
+
     def test_board_adjacent_field_check(self):
         """
         Test if, during initialization of board layout, each meaningful element (that is - the ones that do not

@@ -140,14 +140,10 @@ class SmallSigmarBoard:
     }
 
     def __init__(self):
-        self.first_element = SigmarMarble.gold
-        self.initial_items = [
-            (SigmarMarble.quicksilver, SigmarMarble.silver), (SigmarMarble.quicksilver, SigmarMarble.copper),
-            (SigmarMarble.earth, SigmarMarble.earth), (SigmarMarble.fire, SigmarMarble.fire),
-            (SigmarMarble.wind, SigmarMarble.wind), (SigmarMarble.water, SigmarMarble.water),
-            (SigmarMarble.mors, SigmarMarble.vitae), (SigmarMarble.salt, SigmarMarble.salt)
-        ]
+        self.first_element: SigmarMarble = SigmarMarble.gold
+        self.initial_items: list[SigmarMarble] | None = None
         self.layout: list[list[SigmarField]] | None = None
+        self.init_items()
         self.init_board_rows()
         self.compose_board_interconnections()
         self.layout_midpoint = 3, 4
@@ -160,6 +156,14 @@ class SmallSigmarBoard:
             return 0
         else:
             return randint(0, len(marble_list_)-1)
+
+    def init_items(self):
+        self.initial_items = [
+            (SigmarMarble.quicksilver, SigmarMarble.silver), (SigmarMarble.quicksilver, SigmarMarble.copper),
+            (SigmarMarble.earth, SigmarMarble.earth), (SigmarMarble.fire, SigmarMarble.fire),
+            (SigmarMarble.wind, SigmarMarble.wind), (SigmarMarble.water, SigmarMarble.water),
+            (SigmarMarble.mors, SigmarMarble.vitae), (SigmarMarble.salt, SigmarMarble.salt)
+        ]
 
     def init_board_rows(self):
         # small board only has limited amount of fields compared to the regular layout which has plenty
@@ -214,7 +218,10 @@ class SmallSigmarBoard:
 
     def reset_board(self):
         """Return board to empty state for a new game/test."""
-
+        self.init_items()
+        for row in self.layout[1:-1]:  # don't rebuild entire layout again
+            for field in row[1:-1]:
+                field.update_field(None)
 
     def lay_down_marbles_in_wavefront(self):
         """

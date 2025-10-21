@@ -15,7 +15,6 @@ class SmallSigmarGameTest(TestCase):
         rand_gametype = "".join(choices(ascii_letters, k=randint(10, 15)))
         with self.assertRaises(ValueError):
             SmallSigmarGame(rand_gametype)
-        small_game = SmallSigmarGame("small")
         small_board_layout_sizes = [6, 7, 8, 9, 8, 7, 6]
         for expected_size, row in zip(small_board_layout_sizes, self.small_game.board.layout):
             self.assertEqual(expected_size, len(row))
@@ -25,3 +24,28 @@ class SmallSigmarGameTest(TestCase):
         self.assertIsNone(self.small_game.eligible_fields)
         self.assertEqual(SigmarMarble.lead.value, self.small_game.next_metal_to_clear)
 
+    def test_marble_matching(self):
+        good_pairs = [
+            (SigmarMarble.water, SigmarMarble.water), (SigmarMarble.fire, SigmarMarble.fire),
+            (SigmarMarble.earth, SigmarMarble.earth), (SigmarMarble.wind, SigmarMarble.wind),
+            (SigmarMarble.salt, SigmarMarble.salt), (SigmarMarble.salt, SigmarMarble.water),
+            (SigmarMarble.salt, SigmarMarble.wind), (SigmarMarble.salt, SigmarMarble.fire),
+            (SigmarMarble.salt, SigmarMarble.earth), (SigmarMarble.vitae, SigmarMarble.mors)
+        ]
+        bad_pairs = [
+            (SigmarMarble.water, SigmarMarble.earth), (SigmarMarble.quicksilver, SigmarMarble.earth),
+            (SigmarMarble.vitae, SigmarMarble.fire), (SigmarMarble.salt, SigmarMarble.vitae),
+            (SigmarMarble.silver, SigmarMarble.earth), (SigmarMarble.silver, SigmarMarble.water)
+        ]
+
+        for pair in good_pairs:
+            msg = f"Not true for pair {pair[0]} {pair[1]}"
+            self.assertTrue(self.small_game.test_eligible_move(*pair), msg)
+        for pair in bad_pairs:
+            msg = f"Not false for pair {pair[0]} {pair[1]}"
+            self.assertFalse(self.small_game.test_eligible_move(*pair), msg)
+
+
+if __name__ == '__main__':
+    from unittest import main
+    main()
