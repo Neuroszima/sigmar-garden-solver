@@ -19,6 +19,28 @@ class SigmarMarble(Enum):
     mors = 64
     vitae = 65
 
+    @classmethod
+    def get_marble_name(cls, integer: int):
+        translation_dict = {
+            0: "salt",
+            1: "earth",
+            2: "fire",
+            3: "wind",
+            4: "water",
+            16: "lead",
+            17: "tin",
+            18: "iron",
+            19: "copper",
+            20: "silver",
+            21: "gold",
+            32: "quicksilver",
+            64: "mors",
+            65: "vitae"
+        }
+        if integer in translation_dict.keys():
+            return translation_dict[integer]
+        return "None"
+
 
 class SigmarField:
     def __init__(self, marble: int | None, row_index: int, field_index: int,
@@ -47,6 +69,10 @@ class SigmarField:
                 and (self.field_index == other.field_index) and (self.board_edge_field == other.board_edge_field)
         else:
             return NotImplemented
+
+    def __str__(self):
+        return (f"Field: row={self.row_index}, index={self.field_index}, "
+                f"marble={SigmarMarble.get_marble_name(self.marble)}, free?={self.free}")
 
     def update_neighbours(self, neighbours: Optional[list["SigmarField"]]):
         """Assign empty pointers to a real ones for each of the surrounding board fields"""
@@ -96,6 +122,7 @@ class SigmarField:
             i += 1
             j += 1
             k += 1
+        self.free = False
         return False
 
     def update_field(self, marble: int | None):
@@ -147,6 +174,7 @@ class SmallSigmarBoard:
         self.init_board_rows()
         self.compose_board_interconnections()
         self.layout_midpoint = 3, 4
+        self.initialized_to_play = False
 
     @staticmethod
     def __rand_select_marble_by_index(marble_list_: list):
@@ -231,8 +259,6 @@ class SmallSigmarBoard:
 
         Partially tested
         """
-        # mid_row = len(self.layout)//2+1
-        # mid_element = len(self.layout[mid_row])//2+1
         self.layout[self.layout_midpoint[0]][self.layout_midpoint[1]].update_field(self.first_element.value)
         eligible_wavefront_elements = [self.layout[self.layout_midpoint[0]][self.layout_midpoint[1]]]
         shuffle(self.initial_items)
@@ -259,6 +285,11 @@ class SmallSigmarBoard:
                         break
                 if not success:
                     raise RuntimeError(f"Could not find proper field for {marble=}, aborting.")
+        for row in self.layout[1:-1]:
+            for field in row[1:-1]:
+                field.check_and_set_free_status(invoke_for_neighbours=False)
+
+        self.initialized_to_play = True
 
     def print_board(self):
         mid_row_idx = len(self.layout)//2-1

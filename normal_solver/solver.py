@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Literal
+from itertools import product
 
 from normal_solver.board import SigmarMarble, SigmarField, SmallSigmarBoard
 
@@ -13,14 +14,13 @@ class SmallSigmarGame:
     base_marbles = {0, 1, 2, 3, 4}
     QUICKSILVER = SigmarMarble.quicksilver.value
 
-    def __init__(self, board_type: Literal["small", "normal"]):
-        if board_type == "small":
-            self.board = SmallSigmarBoard()
-            self.board.lay_down_marbles_in_wavefront()
-        else:
-            raise ValueError("No other type of initialization is possible. Use: 'small'")
+    def __init__(self):
+        self.board = SmallSigmarBoard()
+        self.board.lay_down_marbles_in_wavefront()
         self.eligible_fields: list | None = None
+        self.eligible_moves: list | None = None
         self.next_metal_to_clear: int = SigmarMarble.lead.value
+        self.winning_strategy: list[list] | None = None
 
     def set_eligible_fields(self):
         self.eligible_fields = []
@@ -28,6 +28,16 @@ class SmallSigmarGame:
             for field in row[1:-1]:
                 if field.free and field.marble is not None:
                     self.eligible_fields.append(field)
+
+    def set_eligible_moves(self):
+        self.eligible_moves = []
+        if len(self.eligible_fields) > 0:
+            f = [f for f in self.eligible_fields if f.marble != SigmarMarble.gold.value]
+            pairs_to_check = product(f, f)
+            pair: tuple[SigmarField, SigmarField]
+            for pair in pairs_to_check:
+                if self.test_eligible_move(pair[0].marble, pair[1].marble):
+                    self.eligible_moves.append(pair)
 
     @staticmethod
     def __convert_to_int(marble: Enum | SigmarMarble | int) -> int:
@@ -38,6 +48,21 @@ class SmallSigmarGame:
         elif isinstance(marble, Enum):
             return marble.value
         raise ValueError(f"Improper type of value, is: {marble.__class__}, needs to be int|Enum|SigmarMarble")
+
+    def __increment_metal_to_clear(self):
+        """Progressively increment the metal value that should be cleared next"""
+        if self.next_metal_to_clear is not None:
+            if self.next_metal_to_clear < SigmarMarble.gold.value:
+                self.next_metal_to_clear += 1
+            else:
+                self.next_metal_to_clear = None
+
+    def __decrement_metal_to_clear(self):
+        if self.next_metal_to_clear is not None:
+            if self.next_metal_to_clear > SigmarMarble.lead.value:
+                self.next_metal_to_clear -= 1
+        else:
+            self.next_metal_to_clear = SigmarMarble.gold.value
 
     def test_eligible_move(self, marble_1, marble_2) -> bool:
         """
@@ -86,3 +111,32 @@ class SmallSigmarGame:
             elif marble_type_2 == 64:  # vitae/mors
                 return marble_type_1 == 65
         return False
+
+    def solve(self, moves_for_victory=9):
+        if not self.board.initialized_to_play:
+            raise RuntimeError("Board not initialized")
+
+        self.winning_strategy = []
+        i = 0
+        while not (len(self.winning_strategy) == moves_for_victory) or (i > 140):
+            self.set_eligible_fields()
+            self.set_eligible_moves()
+
+            i += 1
+            break
+
+
+if __name__ == '__main__':
+    from random import seed
+    seed(19)
+    sigmar_game_smol = SmallSigmarGame()
+    sigmar_game_smol.solve()
+    sigmar_game_smol.board.print_board()
+
+    print("proper fields:")
+    for proper_field in sigmar_game_smol.eligible_fields:
+        print(proper_field)
+    print("proper moves:")
+    for proper_move in sigmar_game_smol.eligible_moves:
+        print("Field 1:", str(proper_move[0]))
+        print("Field 2:", str(proper_move[1]))
