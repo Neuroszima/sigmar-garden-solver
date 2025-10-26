@@ -185,6 +185,9 @@ class SmallSigmarBoard:
         else:
             return randint(0, len(marble_list_)-1)
 
+    def get_field_by_index(self, row_idx, field_idx):
+        return self.layout[row_idx][field_idx]
+
     def init_items(self):
         self.initial_items = [
             (SigmarMarble.quicksilver, SigmarMarble.silver), (SigmarMarble.quicksilver, SigmarMarble.copper),
@@ -219,6 +222,7 @@ class SmallSigmarBoard:
             layer[-1].board_edge_field = True
 
     def compose_board_interconnections(self):
+        """Prepare all the interconnectivity required for neighbourhood checks."""
         field: SigmarField
         for row_idx, board_row in enumerate(self.layout[1:4]):
             for field_idx, field in enumerate(board_row[1:-1]):

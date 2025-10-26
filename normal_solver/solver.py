@@ -17,10 +17,13 @@ class SmallSigmarGame:
     def __init__(self):
         self.board = SmallSigmarBoard()
         self.board.lay_down_marbles_in_wavefront()
-        self.eligible_fields: list | None = None
-        self.eligible_moves: list | None = None
+        self.eligible_fields: list[SigmarField] | None = None
+        self.eligible_moves: list[tuple[SigmarField, SigmarField]] | None = None
         self.next_metal_to_clear: int = SigmarMarble.lead.value
         self.winning_strategy: list[list] | None = None
+
+    def print_board(self):
+        self.board.print_board()
 
     def set_eligible_fields(self):
         self.eligible_fields = []
