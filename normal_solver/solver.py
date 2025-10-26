@@ -1,18 +1,20 @@
 from enum import Enum
 from typing import Literal
-from itertools import product
+from itertools import combinations
 
 from normal_solver.board import SigmarMarble, SigmarField, SmallSigmarBoard
 
 
 class SmallSigmarGame:
     """Untested class"""
-    allowed_combinations = {
+    allowed_marble_value_combinations = {
         (0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 1), (2, 2), (3, 3), (4, 4),
         (16, 32), (17, 32), (18, 32), (19, 32), (20, 32), (64, 65)
     }
     base_marbles = {0, 1, 2, 3, 4}
     QUICKSILVER = SigmarMarble.quicksilver.value
+    MINIMAL_METAL_ELEMENT_VALUE = SigmarMarble.copper.value
+    MAXIMAL_METAL_ELEMENT_VALUE = SigmarMarble.gold.value
 
     def __init__(self):
         self.board = SmallSigmarBoard()
@@ -21,6 +23,35 @@ class SmallSigmarGame:
         self.eligible_moves: list[tuple[SigmarField, SigmarField]] | None = None
         self.next_metal_to_clear: int = SigmarMarble.lead.value
         self.winning_strategy: list[list] | None = None
+
+    @staticmethod
+    def __convert_to_int(marble: Enum | SigmarMarble | int) -> int:
+        if isinstance(marble, int):
+            return marble
+        elif isinstance(marble, SigmarMarble):
+            return marble.value
+        elif isinstance(marble, Enum):
+            return marble.value
+        raise ValueError(f"Improper type of value, is: {marble.__class__}, needs to be int|Enum|SigmarMarble")
+
+    def __increment_metal_to_clear(self):
+        """Progressively increment the metal value that should be cleared next"""
+        if self.next_metal_to_clear is not None:
+            if self.next_metal_to_clear < self.MAXIMAL_METAL_ELEMENT_VALUE:
+                self.next_metal_to_clear += 1
+            else:
+                self.next_metal_to_clear = None
+
+    def __decrement_metal_to_clear(self):
+        """
+        Progressively decrement the metal value that should be cleared next.
+        This function should be used during move-rewind in solver.
+        """
+        if self.next_metal_to_clear is not None:
+            if self.next_metal_to_clear > self.MINIMAL_METAL_ELEMENT_VALUE:
+                self.next_metal_to_clear -= 1
+        else:
+            self.next_metal_to_clear = self.MAXIMAL_METAL_ELEMENT_VALUE
 
     def print_board(self):
         self.board.print_board()
@@ -36,36 +67,11 @@ class SmallSigmarGame:
         self.eligible_moves = []
         if len(self.eligible_fields) > 0:
             f = [f for f in self.eligible_fields if f.marble != SigmarMarble.gold.value]
-            pairs_to_check = product(f, f)
+            pairs_to_check = combinations(f, 2)
             pair: tuple[SigmarField, SigmarField]
             for pair in pairs_to_check:
                 if self.test_eligible_move(pair[0].marble, pair[1].marble):
                     self.eligible_moves.append(pair)
-
-    @staticmethod
-    def __convert_to_int(marble: Enum | SigmarMarble | int) -> int:
-        if isinstance(marble, int):
-            return marble
-        elif isinstance(marble, SigmarMarble):
-            return marble.value
-        elif isinstance(marble, Enum):
-            return marble.value
-        raise ValueError(f"Improper type of value, is: {marble.__class__}, needs to be int|Enum|SigmarMarble")
-
-    def __increment_metal_to_clear(self):
-        """Progressively increment the metal value that should be cleared next"""
-        if self.next_metal_to_clear is not None:
-            if self.next_metal_to_clear < SigmarMarble.gold.value:
-                self.next_metal_to_clear += 1
-            else:
-                self.next_metal_to_clear = None
-
-    def __decrement_metal_to_clear(self):
-        if self.next_metal_to_clear is not None:
-            if self.next_metal_to_clear > SigmarMarble.lead.value:
-                self.next_metal_to_clear -= 1
-        else:
-            self.next_metal_to_clear = SigmarMarble.gold.value
 
     def test_eligible_move(self, marble_1, marble_2) -> bool:
         """
@@ -91,8 +97,8 @@ class SmallSigmarGame:
         marble_type_2 = self.__convert_to_int(marble_2)
 
         # allowed combinations
-        if (tuple([marble_type_1, marble_type_2]) in self.allowed_combinations) \
-            or (tuple([marble_type_2, marble_type_1]) in self.allowed_combinations):
+        if (tuple([marble_type_1, marble_type_2]) in self.allowed_marble_value_combinations) \
+            or (tuple([marble_type_2, marble_type_1]) in self.allowed_marble_value_combinations):
             if marble_type_1 in self.base_marbles:  # base element or salt
                 if marble_type_1 != 0:
                     return (marble_type_2 == marble_type_1) or (marble_type_2 == 0)

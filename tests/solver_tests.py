@@ -110,7 +110,7 @@ class SmallSigmarGameTest(TestCase):
                 raise AssertionError(
                     "Field configuration should not be present as a possible move in collection of available moves.")
         # after loop all cases should be cleared
-        self.assertEqual(0, eligible_moves_for_seed_19)
+        self.assertEqual(0, len(eligible_moves_for_seed_19))
 
 
 if __name__ == '__main__':
